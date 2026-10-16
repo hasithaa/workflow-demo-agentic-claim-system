@@ -129,5 +129,8 @@ plays Ann, Jane and Ivy.
 - Activity arguments are not converted to their declared parameter types
   ([ballerina-library#9320](https://github.com/ballerina-platform/ballerina-library/issues/9320)). This integration's
   activities take plain values, so it is not affected.
+- A human task's `taskInputType` is not shown to the model, and a mismatch is rejected without saying why
+  ([ballerina-library#9323](https://github.com/ballerina-platform/ballerina-library/issues/9323)), so the agent can
+  loop until it fails. `managerApproval` describes its fields in its description instead.
 - Events arriving close together on a one-way agent channel log false failures
   ([ballerina-library#9321](https://github.com/ballerina-platform/ballerina-library/issues/9321)). Cosmetic.

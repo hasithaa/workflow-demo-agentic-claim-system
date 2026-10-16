@@ -71,7 +71,15 @@ Steps:
         reply: {request: Reply}
     },
     humanTasks: {
-        managerApproval: {userRoles: "MANAGER", title: "Approve expense claim", resultType: Decision}
+        // The fields are described here, since 1.0.0 does not show a taskInputType to the model (ballerina-library#9323).
+        managerApproval: {
+            userRoles: "MANAGER",
+            title: "Approve expense claim",
+            description: "Asks the manager to approve the claim, and waits for the decision. Pass claimId, employee, "
+                + "description, billName, billUrl, claimedAmount, billTotal and amountToPay, and findings: a JSON "
+                + "array of strings, one short line per policy check.",
+            resultType: Decision
+        }
     },
     maxIter: 30
 });

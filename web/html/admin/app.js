@@ -80,7 +80,7 @@ function card(t, fresh) {
 
 // What the expense agent found: the figures, and one line per policy rule that applies.
 function assessment(c) {
-  const findings = Array.isArray(c.findings) ? c.findings : [];
+  const findings = Array.isArray(c.findings) ? c.findings : String(c.findings || '').split(/;\s*|\.\s+/).filter(Boolean);
   return `<div class="assessment"><div class="figures">
       <span>Claimed<b>${money(c.claimedAmount)}</b></span><span>Bill total<b>${money(c.billTotal)}</b></span>
       <span>To pay<b>${money(c.amountToPay)}</b></span></div>
