@@ -1,0 +1,144 @@
+# The agentic expense claim demo in one stack: put the WSO2 model provider settings in config/model.toml (see
+# README), then `docker compose up -d --build` and open http://localhost:8080.
+#
+#   web          the claims, approvals and payments contexts and bill storage (nginx) :8080
+#   integration  the expense integration built in WSO2 Integrator (Claims API, expense agent, Management API)
+#   thunder      Thunder, the identity provider: sign-in for the apps and the ICP console   :8095
+#   icp          WSO2 Integration Control Plane 2.1.0                               :9446 (SSO, or admin / admin)
+#   temporal     the durable workflow runtime                                       :7233
+#   mysql        claims, users, ICP and Temporal data                               :3306
+#
+# To run the integration from WSO2 Integrator instead: `INTEGRATION_HOST=host.docker.internal docker compose up -d
+# --build --scale integration=0`, then Run it in the Integrator (see README).
+name: expense-agent-demo
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  temporal:
+    image: temporalio/auto-setup:1.29.7
+    environment:
+      DB: mysql8
+      DB_PORT: 3306
+      MYSQL_SEEDS: mysql
+      MYSQL_USER: root
+      MYSQL_PWD: root
+      DEFAULT_NAMESPACE_RETENTION: 72h
+    ports:
+      - "7233:7233"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  icp:
+    image: wso2/wso2-integration-control-plane:2.1.0
+    volumes:
+      # The image copies the config volume over its install at start.
+      - ./icp/deployment.toml:/home/wso2carbon/wso2-config-volume/conf/deployment.toml:ro
+    ports:
+      - "9446:9446"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      thunder:
+        condition: service_started
+
+  # Mints the secret the integration registers with ICP; it exists only once ICP is running, so it cannot be baked in.
+  icp-seed:
+    build: ./seed
+    environment:
+      ICP_URL: https://icp:9446
+      INTEGRATIONS: claims
+    volumes:
+      - icp-secrets:/secrets
+    depends_on:
+      - icp
+
+  # Thunder is the identity provider for the apps and the ICP console. First boot runs setup.sh once, then serves
+  # the declared users, groups and OAuth clients (seed/thunder). The TLS pair is the demo's own (localhost, thunder).
+  # Browsers reach it at https://localhost:8095 (its public URL and token issuer); containers at https://thunder:8090.
+  thunder:
+    image: ghcr.io/thunder-id/thunderid:1.0.1
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        sed -i -e 's|public_url: "https://localhost:8090"|public_url: "https://localhost:8095"|' \
+               -e 's|- "https://localhost:8090"|- "https://localhost:8095"|' deployment.yaml
+        [ -f config/certs/crypto.key ] || ./setup.sh
+        exec ./start.sh /opt/demo/thunder-resources.yaml
+    environment:
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: admin12345
+    volumes:
+      - thunder-config:/opt/thunderid/config
+      - thunder-db:/opt/thunderid/database
+      - ./seed/thunder/thunder-resources.yaml:/opt/demo/thunder-resources.yaml:ro
+      - ./seed/thunder-tls/server.cert:/opt/thunderid/config/certs/server.cert:ro
+      - ./seed/thunder-tls/server.key:/opt/thunderid/config/certs/server.key:ro
+    ports:
+      - "8095:8090"
+
+  integration:
+    build:
+      context: .
+      dockerfile: docker/ballerina.Dockerfile
+      args:
+        SRC: integration
+        PKG: expenseagent
+    environment:
+      ICP_SECRET_FILE: /secrets/claims.secret
+      ICP_PROJECT: claims
+      ICP_INTEGRATION: expenseagent
+      ICP_RUNTIME_HOST_URL: http://integration
+    volumes:
+      - ./config/integration.toml:/app/config/Config.toml:ro
+      # The WSO2 model provider settings (serviceUrl, accessToken): local only, not committed.
+      - ./config/model.toml:/app/config/model.toml:ro
+      # The agent reads the uploaded bills from bill storage.
+      - bills:/data/files:ro
+      - icp-secrets:/secrets:ro
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      temporal:
+        condition: service_started
+      icp-seed:
+        condition: service_completed_successfully
+      web:
+        condition: service_started
+
+  web:
+    image: nginx:1.30-alpine
+    environment:
+      INTEGRATION_HOST: ${INTEGRATION_HOST:-integration}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./web/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./web/nginx/40-seed-files.sh:/docker-entrypoint.d/40-seed-files.sh:ro
+      - ./web/html:/usr/share/nginx/html:ro
+      - ./web/seed-files:/seed-files:ro
+      - bills:/data/files
+    depends_on:
+      - thunder
+
+volumes:
+  thunder-config:
+  thunder-db:
+  mysql-data:
+  bills:
+  icp-secrets:

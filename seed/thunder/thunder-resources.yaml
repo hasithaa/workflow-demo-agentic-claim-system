@@ -1,0 +1,165 @@
+# The demo's identity, declared: users, their groups, and the two OAuth clients (the claims app and the ICP console).
+#
+# Thunder loads this multi-document YAML at startup. Users (Ann, Jane, Ivy) sign in with their email address and the password
+# `demo12345`. Group names are the roles the workflow and the Workflow Management API see in the `groups` claim.
+
+resource_type: user
+id: user-ann
+type: Person
+ouId: 01900000-0000-7000-8000-000000000001
+attributes:
+  username: ann@example.com
+  email: ann@example.com
+  given_name: Ann
+  family_name: Lee
+credentials:
+  password: "demo12345"
+---
+resource_type: user
+id: user-jane
+type: Person
+ouId: 01900000-0000-7000-8000-000000000001
+attributes:
+  username: jane@example.com
+  email: jane@example.com
+  given_name: Jane
+  family_name: Moreno
+credentials:
+  password: "demo12345"
+---
+resource_type: user
+id: user-ivy
+type: Person
+ouId: 01900000-0000-7000-8000-000000000001
+attributes:
+  username: ivy@example.com
+  email: ivy@example.com
+  given_name: Ivy
+  family_name: Chen
+credentials:
+  password: "demo12345"
+---
+resource_type: group
+id: group-employee
+name: EMPLOYEE
+description: Files expense claims
+ouId: 01900000-0000-7000-8000-000000000001
+members:
+  - id: user-ann
+    type: user
+  - id: user-jane
+    type: user
+---
+resource_type: group
+id: group-manager
+name: MANAGER
+description: Approves expense claims; the approval task is addressed to this role
+ouId: 01900000-0000-7000-8000-000000000001
+members:
+  - id: user-jane
+    type: user
+---
+resource_type: group
+id: group-finance
+name: FINANCE
+description: Releases payments; the payment review is addressed to this role
+ouId: 01900000-0000-7000-8000-000000000001
+members:
+  - id: user-ivy
+    type: user
+---
+resource_type: application
+id: app-claims-web
+name: Northbridge claims
+type: browser
+logoUrl: "http://localhost:8080/shared/logo.svg"
+ouId: 01900000-0000-7000-8000-000000000001
+authFlowHandle: default-flow
+inboundAuthConfig:
+  - type: oauth2
+    config:
+      clientId: claims-web
+      redirectUris:
+        - "http://localhost:8080/callback/"
+        - "http://127.0.0.1:8080/callback/"
+      grantTypes:
+        - authorization_code
+        - refresh_token
+      responseTypes:
+        - code
+      tokenEndpointAuthMethod: none
+      publicClient: true
+      pkceRequired: true
+      token:
+        accessToken:
+          userConfig:
+            attributes:
+              - username
+              - email
+              - given_name
+              - family_name
+              - groups
+        idToken:
+          userAttributes:
+            - username
+            - email
+            - given_name
+            - family_name
+            - groups
+      scopeClaims:
+        groups:
+          - groups
+        profile:
+          - username
+          - given_name
+          - family_name
+        email:
+          - email
+---
+resource_type: application
+id: app-icp-console
+name: Integration Control Plane
+type: fullstack
+logoUrl: "http://localhost:8080/shared/icp-logo.svg"
+ouId: 01900000-0000-7000-8000-000000000001
+authFlowHandle: default-flow
+inboundAuthConfig:
+  - type: oauth2
+    config:
+      clientId: icp-console
+      clientSecret: "icp-console-secret"
+      redirectUris:
+        - "https://localhost:9446/sso/callback"
+      grantTypes:
+        - authorization_code
+        - refresh_token
+      responseTypes:
+        - code
+      tokenEndpointAuthMethod: client_secret_basic
+      pkceRequired: false
+      publicClient: false
+      token:
+        accessToken:
+          userConfig:
+            attributes:
+              - username
+              - email
+              - given_name
+              - family_name
+              - groups
+        idToken:
+          userAttributes:
+            - username
+            - email
+            - given_name
+            - family_name
+            - groups
+      scopeClaims:
+        groups:
+          - groups
+        profile:
+          - username
+          - given_name
+          - family_name
+        email:
+          - email

@@ -1,0 +1,6 @@
+# The WSO2 model provider the expense agent uses. Copy this file to config/model.toml (it is not committed) and fill
+# in the two values from WSO2 Integrator: open the integration, run "Configure default WSO2 Model Provider", and copy
+# serviceUrl and accessToken from the Config.toml it writes. The token expires; refresh it the same way.
+[ballerina.ai.wso2ProviderConfig]
+serviceUrl = "<serviceUrl>"
+accessToken = "<accessToken>"

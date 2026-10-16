@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Signing in</title>
+  <link rel="stylesheet" href="/shared/app.css">
+</head>
+<body>
+  <main style="max-width:520px;padding-top:80px"><div class="card" id="status">Signing in…</div></main>
+  <script type="module">
+    import { completeSignIn } from '/shared/auth.js';
+    completeSignIn().then((next) => location.replace(next)).catch((e) => {
+      document.getElementById('status').innerHTML = `${e.message} <a href="/claims/">Try again</a>`;
+    });
+  </script>
+</body>
+</html>

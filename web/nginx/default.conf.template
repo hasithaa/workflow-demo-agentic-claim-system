@@ -1,0 +1,67 @@
+# The demo's single entry point (http://localhost:8080): the claims and admin contexts, bill storage, and the two APIs
+# behind them. The apps sign in with Thunder (OIDC, PKCE) and send the access token on every call; each backend
+# validates it. INTEGRATION_HOST comes from docker compose; use host.docker.internal to reach a process on the host.
+
+resolver 127.0.0.11 valid=10s ipv6=off;
+client_max_body_size 10m;
+
+server {
+    listen 8080;
+    root /usr/share/nginx/html;
+
+    set $integration ${INTEGRATION_HOST};
+    set $thunder thunder;
+
+    # The token exchange of the sign-in (Thunder serves TLS with the demo's own certificate).
+    location = /oidc/token {
+        proxy_pass https://$thunder:8090/oauth2/token;
+        proxy_ssl_verify off;
+    }
+
+    # Thunder's signing keys over plain HTTP inside the network, for validators that cannot skip TLS checks.
+    location = /oidc/jwks {
+        proxy_pass https://$thunder:8090/oauth2/jwks;
+        proxy_ssl_verify off;
+    }
+
+    # Token check for bill storage: Thunder's userinfo answers 200 only for a valid access token.
+    location = /_token {
+        internal;
+        proxy_pass https://$thunder:8090/oauth2/userinfo;
+        proxy_ssl_verify off;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+    }
+
+    # The Claims API built in WSO2 Integrator; it validates the token itself.
+    location /api/claims {
+        rewrite ^/api(/claims.*)$ $1 break;
+        proxy_pass http://$integration:9090;
+    }
+
+    # The Workflow Management API that ships with the workflow runtime. It validates the token in X-JWT-Assertion and
+    # takes the user and roles from its claims; forwarded identity headers are dropped.
+    location /api/workflow/ {
+        proxy_set_header X-JWT-Assertion $http_authorization;
+        proxy_set_header Authorization "";
+        proxy_set_header x-user-id "";
+        proxy_set_header x-user-roles "";
+        proxy_set_header X-API-Key "";
+        rewrite ^/api(/workflow/.*)$ $1 break;
+        proxy_pass http://$integration:8234;
+    }
+
+    # Bill storage: the claims context PUTs a file, both contexts read it by its link, with the token.
+    location /files/ {
+        auth_request /_token;
+        alias /data/files/;
+        dav_methods PUT;
+        create_full_put_path on;
+        dav_access user:rw group:r all:r;
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+        add_header Cache-Control "no-store";
+    }
+}

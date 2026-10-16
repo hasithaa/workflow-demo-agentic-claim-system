@@ -1,0 +1,3 @@
+[workspace]
+title = "ExpenseAgent"
+packages = ["expenseagent"]
