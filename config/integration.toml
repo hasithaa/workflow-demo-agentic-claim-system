@@ -1,5 +1,5 @@
 # The claims integration in docker compose. Running it from WSO2 Integrator instead: put the same values in
-# integration/claimapproval/Config.toml with dbHost = "localhost", url = "localhost:7233" and both jwksUrl values
+# integration/expenseagent/Config.toml with dbHost = "localhost", url = "localhost:7233" and both jwksUrl values
 # "http://localhost:8080/oidc/jwks".
 dbHost = "mysql"
 dbUser = "claims"

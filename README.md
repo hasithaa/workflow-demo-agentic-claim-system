@@ -1,78 +1,81 @@
-# Workflows that wait for people: a claim approval demo
+# An agent that follows the policy: an agentic expense claim demo
 
-![Workflows that wait for people](docs/images/title.png)
+An expense claim run by a durable AI agent built in WSO2 Integrator. Ann files a claim and uploads the bill; the agent
+reads the bill, checks it against the company's expense policy written in plain language, asks Ann for anything
+missing, and asks her manager, Jane, with its own assessment. Payment waits for Ivy in finance to release it.
 
-An expense claim approval, run by a durable workflow built in WSO2 Integrator. Ann files a claim, the workflow asks
-her for the bill, then asks her manager, Jane, to approve. Nothing polls, nothing is lost on a restart, and the apps
-around it hold no process logic.
+The agent decides the path; the workflow runtime keeps it durable. It waits for Ann's answer for days if it has to,
+survives restarts, and never pays without a person releasing it.
 
-Everything runs in one Docker Compose stack: the web app, the integration, sign-in, the WSO2 Integration Control
-Plane (ICP), Temporal and MySQL.
+This is the follow-up to [workflow-demo-simple-claim-app](https://github.com/hasithaa/workflow-demo-simple-claim-app),
+where a fixed workflow ran the same claim. Same app, same people, same stack; an agent instead of a fixed flow.
 
 ## The use case
 
-![Ann files claims, Jane approves them; the process: submit, attach the bill, a manager decides, recorded](docs/images/use-case.png)
+Ann claims 420.50 for a team dinner with a customer. The bill shows four set menus, a sea bass, sparkling water, two
+bottles of house wine (78.00), service, and a total of 420.50. The expense policy says:
 
-Ann, a sales executive, files expense claims; Jane, her manager, approves them. Every claim follows the same steps,
-and days can pass between any two of them. That is a long-running workflow made of three building blocks:
+- Client entertainment needs the names of everyone who attended and the client's company; up to 120 per person.
+- Alcohol is not reimbursed.
+- Taxis for business travel are reimbursed with no further detail.
+- The bill's total must match the amount claimed.
 
-![Start: a request starts a workflow. Wait: it waits for an event. Human task: it asks a person, by role](docs/images/blocks.png)
-
-Here it is running: Ann in Expenses on the left, Jane in Approvals on the right. Ann files a claim and uploads the
-bill, Jane gets the approval task and approves, and Ann sees the result.
-
-![The demo running: Ann files a claim and uploads the bill, Jane approves it](docs/images/demo.gif)
+The agent reads the bill image line by line and asks Ann who attended and which client they were from. Once she
+answers, Jane gets the approval task with the agent's assessment: 342.50 to pay (the wine left out), the per-person
+amount against the 120 limit, and the bill's total against the claim. Jane approves; Ivy releases 342.50.
 
 ## Run it
 
-All you need is Docker with Compose, with about 6 GB of memory for Docker. WSO2 Integrator is only needed to open
-or change the integration.
+You need Docker with Compose (about 6 GB of memory for Docker), and a WSO2 model provider token for the agent.
 
-```sh
-docker compose up -d --build
-```
+1. **Configure the model.** In WSO2 Integrator, open the `integration/` folder and run **Configure default WSO2
+   Model Provider**. Copy `config/model.toml.example` to `config/model.toml`, and fill in `serviceUrl` and
+   `accessToken` from the Config.toml the Integrator wrote. `config/model.toml` is not committed. The token
+   expires; refresh it the same way.
+2. **Start the stack:**
 
-The first start builds the integration and pulls the images, so it takes a few minutes. When
-`docker compose ps` shows everything running, open **http://localhost:8080**.
+   ```sh
+   docker compose up -d --build
+   ```
+
+   The first start builds the integration and pulls the images, so it takes a few minutes. When `docker compose ps`
+   shows everything running, open **http://localhost:8080**.
 
 Sign-in goes through **Thunder**, the identity provider, at https://localhost:8095. The first time, open
 https://localhost:8095 and accept its self-signed certificate (the demo's own), then come back.
 
 | User | Password | Groups | Can use |
 |---|---|---|---|
-| `ann@example.com` | `demo12345` | EMPLOYEE | **Expenses** (`/claims/`): file claims, upload bills |
+| `ann@example.com` | `demo12345` | EMPLOYEE | **Expenses** (`/claims/`): file claims, upload bills, answer the agent |
 | `jane@example.com` | `demo12345` | EMPLOYEE, MANAGER | **Expenses**, and **Approvals** (`/admin/`): approve or reject claims |
+| `ivy@example.com` | `demo12345` | FINANCE | **Payments** (`/payments/`): release or hold payments |
 
-The ICP console is at **https://localhost:9446**: **Sign in with SSO** as Jane to see the claim workflows and their
-tasks, or use `admin` / `admin`.
+The ICP console is at **https://localhost:9446**: **Sign in with SSO** as Jane or Ivy to see the agent's runs and
+their tasks.
 
-To start over with empty data: `docker compose down -v`. To keep the stack but clear the demo claims (stops running
-workflows, removes new claims and bills): `scripts/reset.sh`.
+To start over with empty data: `docker compose down -v`. To keep the stack but clear the demo claims:
+`scripts/reset.sh`. This demo uses the same ports as workflow-demo-simple-claim-app; stop that stack first if it is
+running.
 
 ## Try it
 
-1. Sign in as Ann at http://localhost:8080/claims/ and click **+ New claim**. The claim shows **Bill required**: the
-   workflow started and is waiting for the bill.
-2. Click **Submit bill** and upload any image. The claim moves to **Waiting for approval**.
-3. In a private window (each window keeps its own sign-in), sign in as Jane at http://localhost:8080/admin/. The
-   approval task is there, with the bill. Add a comment and **Approve**.
-4. Back in Ann's window, the claim shows **Approved** with Jane's comment.
-5. In ICP (https://localhost:9446, **Sign in with SSO** as Jane), open the `claims` project: the workflow run, its
-   steps and the human task are there.
+1. Sign in as Ann at http://localhost:8080/claims/ and click **+ New claim**: "Team dinner with a customer",
+   420.50. The claim shows **Bill required**.
+2. Click **Submit bill** and upload a bill. The agent reads it; the claim shows **Information requested**, with the
+   agent's question.
+3. Click **Reply** and answer, for example "Ann Lee, Tom Reed and Priya Shah from Acme Corp, and Leo Park from our
+   sales team." The claim moves to **Waiting for approval**.
+4. In a private window, sign in as Jane at http://localhost:8080/admin/. The task shows the bill and the agent's
+   assessment. Approve it.
+5. In another private window, sign in as Ivy at http://localhost:8080/payments/ and click **Release payment**. Ann's
+   claim shows **Paid**, with the amount paid.
 
 ## What is inside
 
-![Solution architecture: the app, the integration layer built in WSO2 Integrator, and the platform](docs/images/architecture.png)
-
-The app holds no process logic: Expenses calls the Claims API, Approvals calls the Workflow Management API that comes
-with the workflow integration. Everything runs in one Docker Compose stack:
-
-![The demo stack: browser, web gateway, Thunder, the integration, MySQL, Temporal and ICP](docs/images/stack.png)
-
 | Service | What it is | Port |
 |---|---|---|
-| `web` | nginx: the two contexts (`/claims/`, `/admin/`), bill storage, and the gateway to the APIs | 8080 |
-| `integration` | The claims integration from `integration/`: the Claims API, the `processClaim` workflow, and the Workflow Management API | internal |
+| `web` | nginx: Expenses (`/claims/`), Approvals (`/admin/`), Payments (`/payments/`), bill storage, and the gateway to the APIs | 8080 |
+| `integration` | The expense integration from `integration/`: the Claims API, the `expenseAgent` durable agent, and the Workflow Management API | internal |
 | `thunder` | Thunder 1.0.1, the identity provider: sign-in for the apps and the ICP console (`seed/thunder/`) | 8095 |
 | `icp` | WSO2 Integration Control Plane 2.1.0 (`wso2/wso2-integration-control-plane`), with `icp/deployment.toml` | 9446 |
 | `icp-seed` | Mints the secret the integration registers with ICP, on first start | |
@@ -85,75 +88,46 @@ with the workflow integration. Everything runs in one Docker Compose stack:
 |---|---|
 | Ballerina (the integration's build) | 2201.14.1 |
 | `ballerina/workflow` | 1.0.0 |
+| `ballerina/ai` (the WSO2 model provider) | 1.16.0 |
 | WSO2 Integration Control Plane | 2.1.0 |
 | Thunder | 1.0.1 |
 | Temporal (`temporalio/auto-setup`) | 1.29.7 |
 | MySQL | 8.4 |
 | nginx | 1.30 |
 
-To open and run the integration in WSO2 Integrator, use a version that ships Ballerina 2201.14.1 or later.
-
 ### How sign-in works
 
-Thunder is the identity provider. The apps sign in with OpenID Connect (authorization code with PKCE) and send the
-access token, a JWT, on every call:
-
-- The **Claims API** validates the token itself (issuer and Thunder's signing keys) and takes the employee from it.
-- The **Workflow Management API** gets the same token from the gateway in `X-JWT-Assertion`; it validates it and
-  takes the user from the `username` claim and the roles from the `groups` claim, so Jane, in `MANAGER`, sees the
-  approval task and Ann does not.
-- **Bill storage** accepts a file only with a valid token.
-- The **ICP console** signs in with the same Thunder users (SSO); Thunder's groups map to console roles in
-  `db/05-icp-sso.sql`.
-
-The users, groups and OAuth clients are declared in `seed/thunder/thunder-resources.yaml`. `scripts/token.sh
-ann@example.com` prints a token for scripts and API tests.
+As in the first demo: Thunder is the identity provider, the apps sign in with OpenID Connect (authorization code
+with PKCE) and send the access token, a JWT, on every call. The Claims API validates it and takes the employee from
+it; the Workflow Management API validates it and takes the user and roles from its claims, so Jane, in `MANAGER`,
+sees the approval task and Ivy, in `FINANCE`, sees the payment review. Thunder's groups map to ICP roles in
+`db/05-icp-sso.sql`. `scripts/token.sh ann@example.com` prints a token for scripts and API tests.
 
 ## The integration
 
-![One claim, one workflow, one ID: Run Workflow returns the ID, the first step reads it, Send Data delivers the bill to it](docs/images/claimid.png)
+`integration/` is the WSO2 Integrator project: open the folder in WSO2 Integrator to see the agent, its activities,
+the HTTP service and the connection.
 
-`integration/` is the WSO2 Integrator project, as built in the designer: open the folder in WSO2 Integrator to see the
-workflow, the activities, the HTTP service and the connection.
+- **`expenseAgent`** (`agents.bal`) is a durable agent, and it is the workflow for each claim: every model call,
+  activity, wait and task is recorded history. Its instructions carry the expense policy.
+- **Activities** (`functions.bal`): `readBill` reads the bill image with the model (`ai:ImageDocument`) into the
+  vendor, the date, the total and every line item; `updateClaim` records the status and note Ann sees; `payClaim`
+  pays the claim, and is gated: the Workflow Management API holds it as a review for the `FINANCE` role until a person
+  releases it.
+- **Tools:** `subtract` and `perPerson` compute every amount in code; the model never does the arithmetic.
+- **Events:** `bill` (the uploaded bill) and `reply` (Ann's answers), which the agent waits for durably.
+- **Human task:** `managerApproval` for the `MANAGER` role, carrying the agent's assessment.
+- **The Claims API** (`main.bal`): `POST /claims` records the claim and starts the agent under the claim's id;
+  `POST /claims/{id}/bill` and `POST /claims/{id}/reply` send the bill and Ann's answers to that claim's agent run;
+  `GET /claims` lists the signed-in employee's claims.
 
-- `processClaim` reads its own workflow ID, records the claim under it, waits for the bill (`Await Data`), handles
-  the attachment, asks a `MANAGER` (`Human Task`), and then either approves and sends the claim for payment or
-  rejects it and notifies the employee.
-- A claim's id is its workflow's id. The Claims API (`/claims`) starts the workflow with `Run Workflow` and returns
-  that id; the workflow's first step reads it with the Workflow ID node, and every activity records the claim under it. The bill route sends the bill to the
-  claim's workflow by that id (`Send Data Event`); `GET /claims` lists an employee's claims. The apps show a short
-  form of the id, such as `CLM-020417`.
-- The Workflow Management API is switched on (`Enable Workflow Management REST API` on the overview), and ICP
-  monitoring is enabled (the `wso2/icp.runtime.bridge` import).
+`prototype/expense_agent` is the in-memory prototype the integration grew from: the same agent with a driver that
+plays Ann, Jane and Ivy.
 
-To run it from WSO2 Integrator against this stack instead of the container:
+## Known issues (ballerina/workflow 1.0.0)
 
-```sh
-INTEGRATION_HOST=host.docker.internal docker compose up -d --build --scale integration=0
-```
-
-then create `integration/claimapproval/Config.toml`:
-
-```toml
-dbHost = "localhost"
-dbUser = "claims"
-dbPassword = "claims"
-dbName = "claims"
-jwksUrl = "http://localhost:8080/oidc/jwks"
-
-[ballerina.workflow]
-mode = "LOCAL"
-url = "localhost:7233"
-
-[ballerina.workflow.management.rest]
-enableManagementApi = true
-enableBasicAuth = false
-enableJwtAuth = true
-jwtAuthHeader = "X-JWT-Assertion"
-jwksUrl = "http://localhost:8080/oidc/jwks"
-jwtIssuer = "https://localhost:8095"
-userIdClaim = "username"
-rolesClaim = "groups"
-```
-
-and click **Run**. (Leave ICP monitoring off in the Integrator for this, or point it at https://localhost:9446.)
+- Activity arguments are not converted to their declared parameter types
+  ([ballerina-library#9320](https://github.com/ballerina-platform/ballerina-library/issues/9320)). This integration's
+  activities take plain values, so it is not affected.
+- Events arriving close together on a one-way agent channel log false failures
+  ([ballerina-library#9321](https://github.com/ballerina-platform/ballerina-library/issues/9321)). Cosmetic.

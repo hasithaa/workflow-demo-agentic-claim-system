@@ -4,7 +4,7 @@
 #   web          the claims, approvals and payments contexts and bill storage (nginx) :8080
 #   integration  the expense integration built in WSO2 Integrator (Claims API, expense agent, Management API)
 #   thunder      Thunder, the identity provider: sign-in for the apps and the ICP console   :8095
-#   icp          WSO2 Integration Control Plane 2.1.0                               :9446 (SSO, or admin / admin)
+#   icp          WSO2 Integration Control Plane 2.1.0                               :9446 (SSO)
 #   temporal     the durable workflow runtime                                       :7233
 #   mysql        claims, users, ICP and Temporal data                               :3306
 #
