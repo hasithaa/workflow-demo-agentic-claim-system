@@ -1,4 +1,6 @@
+import ballerina/ai;
 import ballerina/http;
+import ballerina/io;
 import ballerina/jwt;
 import ballerina/sql;
 import ballerina/workflow.management.rest as _;
@@ -10,12 +12,11 @@ listener http:Listener httpDefaultListener = http:getDefaultListener();
     auth: [{jwtValidatorConfig: {issuer: jwtIssuer, signatureConfig: {jwksConfig: {url: jwksUrl}}}}]
 }
 service /claims on httpDefaultListener {
-    // Starts the expense agent for the claim, and records the claim under the run's id: the claim id is the run's id.
+    // Starts the expense agent for the claim: the run's id is the claim id, and the agent records the claim under it.
     resource function post .(@http:Header string? authorization, @http:Payload Claim payload) returns json|error {
         do {
             Claim claim = {employee: check employeeOf(authorization), description: payload.description, amount: payload.amount};
             string claimId = check expenseAgent.run("A new expense claim.", claim);
-            sql:ExecutionResult _ = check claimsDb->execute(`INSERT INTO claims (claim_id, employee, description, amount, status) VALUES (${claimId}, ${claim.employee}, ${claim.description}, ${claim.amount}, 'SUBMITTED')`);
             return claimId;
         } on fail error err {
             return error("unhandled error", err);
@@ -58,4 +59,10 @@ function employeeOf(string? authorization) returns string|error {
     string bearer = authorization ?: "";
     [jwt:Header, jwt:Payload] [_, payload] = check jwt:decode(bearer.substring(bearer.startsWith("Bearer ") ? 7 : 0));
     return (payload["username"] ?: payload.sub ?: "").toString();
+}
+
+// A stored bill as an image for the model: its link /files/<claim>/<name> is the file <billDir>/<claim>/<name>.
+function billImage(string fileUrl) returns ai:ImageDocument|error {
+    byte[] content = check io:fileReadBytes(billDir + fileUrl.substring("/files".length()));
+    return {content};
 }

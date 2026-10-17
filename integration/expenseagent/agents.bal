@@ -17,7 +17,7 @@ final workflow:DurableAgent expenseAgent = check new ({
 company's expense policy:${EXPENSE_POLICY}
 Steps:
 1. Get your workflow id: it is the claim id.
-2. Call updateClaim with BILL_REQUIRED and an empty note, then wait for the bill event.
+2. Call createClaim with the claim id and the claim from your input, then wait for the bill event.
 3. Call readBill with the bill's fileUrl, and check the claim and the bill against the policy. Never do arithmetic
    yourself: use the subtract activity for the amount to pay and perPerson for the per-person amount.
 4. If the policy needs information the claim does not give, call updateClaim with INFO_REQUESTED and, as the note,
@@ -34,6 +34,7 @@ Steps:
     model: expenseModel,
     inputType: Claim,
     activities: [
+        createClaim,
         readBill,
         updateClaim,
         subtract,

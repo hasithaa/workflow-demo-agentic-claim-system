@@ -1,8 +1,17 @@
 import ballerina/ai;
-import ballerina/io;
 import ballerina/log;
 import ballerina/sql;
 import ballerina/workflow;
+
+# Records a new claim, waiting for its bill.
+#
+# + claimId - The claim id: this run's workflow id
+# + claim - The claim, from the agent's input
+# + return - An error if it cannot be recorded
+@workflow:Activity
+function createClaim(string claimId, Claim claim) returns error? {
+    sql:ExecutionResult _ = check claimsDb->execute(`INSERT INTO claims (claim_id, employee, description, amount, status) VALUES (${claimId}, ${claim.employee}, ${claim.description}, ${claim.amount}, 'BILL_REQUIRED')`);
+}
 
 # Reads a bill image: the vendor, the date, the total and every line item.
 #
@@ -10,8 +19,7 @@ import ballerina/workflow;
 # + return - What the bill says
 @workflow:Activity
 function readBill(string fileUrl) returns BillDetails|error {
-    byte[] content = check io:fileReadBytes(billDir + fileUrl.substring("/files".length()));
-    ai:ImageDocument bill = {content};
+    ai:ImageDocument bill = check billImage(fileUrl);
     BillDetails details = check expenseModel->generate(
         `Read this bill. Give the vendor, the date, the total, the currency, and each line item with its amount. ${bill}`);
     return details;
