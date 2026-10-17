@@ -41,3 +41,30 @@ function payClaim(string claimId, decimal amount) returns error? {
         `UPDATE claims SET status = 'PAID', paid_amount = ${amount} WHERE claim_id = ${claimId}`);
     log:printInfo("Claim paid", claimId = claimId, amount = amount);
 }
+
+# Subtracts amounts from a total, such as the items the policy does not reimburse.
+#
+# + total - The total
+# + amounts - The amounts to subtract
+# + return - The total less the amounts
+@workflow:Activity
+function subtract(decimal total, decimal[] amounts) returns decimal|error {
+    decimal result = total;
+    foreach decimal amount in amounts {
+        result -= amount;
+    }
+    return result;
+}
+
+# Divides an amount between a number of people.
+#
+# + amount - The amount
+# + people - How many people
+# + return - The amount per person
+@workflow:Activity
+function perPerson(decimal amount, int people) returns decimal|error {
+    if people <= 0 {
+        return error("people must be at least 1");
+    }
+    return amount / <decimal>people;
+}

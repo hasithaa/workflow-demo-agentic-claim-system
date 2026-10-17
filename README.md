@@ -114,10 +114,11 @@ the HTTP service and the connection.
   vendor, the date, the total and every line item; `updateClaim` records the status and note Ann sees; `payClaim`
   pays the claim, and is gated: the Workflow Management API holds it as a review for the `FINANCE` role until a person
   releases it.
-- **Tools:** `subtract` and `perPerson` compute every amount in code; the model never does the arithmetic.
+- **Calculations:** `subtract` and `perPerson` are activities too, so every amount is computed in code (and
+  recorded); the model never does the arithmetic.
 - **Events:** `bill` (the uploaded bill) and `reply` (Ann's answers), which the agent waits for durably.
 - **Human task:** `managerApproval` for the `MANAGER` role, carrying the agent's assessment.
-- **The Claims API** (`main.bal`): `POST /claims` records the claim and starts the agent under the claim's id;
+- **The Claims API** (`main.bal`): `POST /claims` starts the agent and records the claim under the run's id;
   `POST /claims/{id}/bill` and `POST /claims/{id}/reply` send the bill and Ann's answers to that claim's agent run;
   `GET /claims` lists the signed-in employee's claims.
 

@@ -10,33 +10,6 @@ const EXPENSE_POLICY = string `
 - Taxis for business travel are reimbursed; no further detail is needed.
 - The bill's total must match the amount claimed; if it does not, say so to the manager.`;
 
-# Subtracts amounts from a total, such as the items the policy does not reimburse.
-#
-# + total - The total
-# + amounts - The amounts to subtract
-# + return - The total less the amounts
-@ai:AgentTool
-isolated function subtract(decimal total, decimal[] amounts) returns decimal {
-    decimal result = total;
-    foreach decimal amount in amounts {
-        result -= amount;
-    }
-    return result;
-}
-
-# Divides an amount between a number of people.
-#
-# + amount - The amount
-# + people - How many people
-# + return - The amount per person
-@ai:AgentTool
-isolated function perPerson(decimal amount, int people) returns decimal|error {
-    if people <= 0 {
-        return error("people must be at least 1");
-    }
-    return amount / <decimal>people;
-}
-
 final workflow:DurableAgent expenseAgent = check new ({
     systemPrompt: {
         role: "Expense claim assistant",
@@ -46,7 +19,7 @@ Steps:
 1. Get your workflow id: it is the claim id.
 2. Call updateClaim with BILL_REQUIRED and an empty note, then wait for the bill event.
 3. Call readBill with the bill's fileUrl, and check the claim and the bill against the policy. Never do arithmetic
-   yourself: use subtract for the amount to pay and perPerson for the per-person amount.
+   yourself: use the subtract activity for the amount to pay and perPerson for the per-person amount.
 4. If the policy needs information the claim does not give, call updateClaim with INFO_REQUESTED and, as the note,
    a short question addressed to the employee, then wait for the reply event. Repeat until nothing is missing.
 5. Call updateClaim with WAITING_APPROVAL and an empty note, then managerApproval. Its task input: claimId,
@@ -60,10 +33,11 @@ Steps:
     },
     model: expenseModel,
     inputType: Claim,
-    tools: [subtract, perPerson],
     activities: [
         readBill,
         updateClaim,
+        subtract,
+        perPerson,
         {activity: payClaim, approvalPolicy: {userRoles: "FINANCE", title: "Release the payment"}}
     ],
     events: {

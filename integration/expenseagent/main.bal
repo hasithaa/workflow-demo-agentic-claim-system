@@ -1,7 +1,6 @@
 import ballerina/http;
 import ballerina/jwt;
 import ballerina/sql;
-import ballerina/uuid;
 import ballerina/workflow.management.rest as _;
 
 listener http:Listener httpDefaultListener = http:getDefaultListener();
@@ -11,13 +10,12 @@ listener http:Listener httpDefaultListener = http:getDefaultListener();
     auth: [{jwtValidatorConfig: {issuer: jwtIssuer, signatureConfig: {jwksConfig: {url: jwksUrl}}}}]
 }
 service /claims on httpDefaultListener {
-    // Records the claim, then starts the expense agent under the claim's id: the claim id is the agent run's id.
+    // Starts the expense agent for the claim, and records the claim under the run's id: the claim id is the run's id.
     resource function post .(@http:Header string? authorization, @http:Payload Claim payload) returns json|error {
         do {
             Claim claim = {employee: check employeeOf(authorization), description: payload.description, amount: payload.amount};
-            string claimId = uuid:createType4AsString();
+            string claimId = check expenseAgent.run("A new expense claim.", claim);
             sql:ExecutionResult _ = check claimsDb->execute(`INSERT INTO claims (claim_id, employee, description, amount, status) VALUES (${claimId}, ${claim.employee}, ${claim.description}, ${claim.amount}, 'SUBMITTED')`);
-            string _ = check expenseAgent.runWithId(claimId, "A new expense claim.", claim);
             return claimId;
         } on fail error err {
             return error("unhandled error", err);
