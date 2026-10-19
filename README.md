@@ -60,15 +60,18 @@ running.
 ## Try it
 
 1. Sign in as Ann at http://localhost:8080/claims/ and click **+ New claim**: "Team dinner with a customer",
-   420.50. The claim shows **Bill required**.
-2. Click **Submit bill** and upload a bill. The agent reads it; the claim shows **Information requested**, with the
-   agent's question.
-3. Click **Reply** and answer, for example "Ann Lee, Tom Reed and Priya Shah from Acme Corp, and Leo Park from our
-   sales team." The claim moves to **Waiting for approval**.
-4. In a private window, sign in as Jane at http://localhost:8080/admin/. The task shows the bill and the agent's
-   assessment. Approve it.
-5. In another private window, sign in as Ivy at http://localhost:8080/payments/ and click **Release payment**. Ann's
-   claim shows **Paid**, with the amount paid.
+   420.50. The claim shows **Bill required**, and on the right, what the expense assistant has done so far.
+2. Drop the bill on the claim and click **Upload bill**. Watch the assistant work: it reads the bill (the line items
+   appear as it read them), works out the amount to pay, and asks a question.
+3. Answer the question in the box under it, for example "Ann Lee, Tom Reed and Priya Shah from Acme Corp, and Leo
+   Park from our sales team." The claim moves to **Waiting for approval**.
+4. In a private window, sign in as Jane at http://localhost:8080/admin/. The task shows the bill beside the lines the
+   assistant read (the wine struck through), its policy checks and figures, and how it got there. Approve it.
+5. In another private window, sign in as Ivy at http://localhost:8080/payments/: who is paid, who approved it and how
+   the amount was worked out. Click **Release $342.50**. Ann's claim shows **Paid**.
+
+Every page reads the assistant's steps from the Workflow Management API (the run's activity tree): nothing about
+the agent is stored by the apps themselves.
 
 ## What is inside
 

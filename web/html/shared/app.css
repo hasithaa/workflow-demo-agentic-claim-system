@@ -142,3 +142,115 @@ a.btn { text-decoration: none; display: inline-block; }
 .assessment .figures b { display: block; font-size: 15px; }
 .assessment ul { margin: 6px 0 0; padding-left: 18px; }
 .assessment li { margin: 2px 0; }
+
+/* Demo 2: list and detail panes, the assistant's timeline, the bill as it was read. */
+main.wide { max-width: 1320px; }
+.split { display: grid; grid-template-columns: 340px 1fr; gap: 18px; align-items: start; }
+@media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+.pane-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.pane-head > div { flex: 1; }
+.pane-head h1 { font-size: 20px; margin: 0; }
+.pane-head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.list-pane .item { display: flex; gap: 10px; align-items: center; width: 100%; text-align: left; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 11px 13px; margin-bottom: 8px; cursor: pointer; font: inherit; color: inherit; }
+.list-pane .item:hover { border-color: #c9d3df; }
+.list-pane .item.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.item-main { flex: 1; min-width: 0; }
+.item-main .title { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item-side { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.item-side .amount { font-size: 14px; }
+.detail-pane { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px 22px; min-height: 420px; }
+.detail-head { display: flex; align-items: center; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.detail-head h2 { margin: 0; font-size: 19px; }
+.amount.big { font-size: 22px; text-align: right; }
+.next { margin: 16px 0 4px; }
+.next:empty { display: none; }
+.cols { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(300px, 1.15fr); gap: 22px; margin-top: 8px; }
+@media (max-width: 1100px) { .cols { grid-template-columns: 1fr; } }
+.col .section:first-child { margin-top: 14px; }
+.placeholder { border: 1px dashed var(--line); border-radius: 10px; padding: 30px; text-align: center; color: var(--muted); }
+.bill-img { width: 100%; max-height: 360px; object-fit: contain; object-position: top; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--ground); cursor: zoom-in; display: block; }
+
+.banner { padding: 11px 14px; border-radius: 10px; font-size: 13.5px; line-height: 1.45; }
+.banner.info { background: var(--info-soft); color: #1d3b8c; }
+.banner.warn { background: var(--warn-soft); color: #7a4a00; }
+.banner.good { background: var(--good-soft); color: #145c3d; }
+.banner.bad { background: var(--bad-soft); color: #8a2525; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+
+.ask-box { border: 1px solid #f0d49c; background: #fffaf0; border-radius: 12px; padding: 14px 16px; }
+.ask-who { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--warn);
+  text-transform: uppercase; letter-spacing: .06em; }
+.bot { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, #6c5ce7, #2f5bd3); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+.ask-q { font-size: 16px; font-weight: 600; margin: 8px 0 10px; line-height: 1.4; }
+.ask-box textarea { background: #fff; }
+.ask-box .actions { margin-top: 10px; }
+
+table.lines { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.lines th { text-align: left; font-weight: 700; padding: 6px 0 8px; border-bottom: 1px solid var(--line); }
+table.lines th small { display: block; font-weight: 500; color: var(--muted); font-size: 12px; }
+table.lines td { padding: 6px 0; border-bottom: 1px solid #eef1f5; }
+table.lines td:last-child { text-align: right; white-space: nowrap; }
+table.lines tr.out td { color: var(--muted); }
+table.lines tr.out td:last-child { text-decoration: line-through; }
+table.lines .tag { margin-left: 8px; font-size: 11px; font-weight: 600; color: var(--bad); background: var(--bad-soft);
+  border-radius: 999px; padding: 1px 7px; }
+table.lines tfoot td { font-weight: 700; border-bottom: 0; padding-top: 8px; }
+
+.timeline { list-style: none; margin: 0; padding: 0; position: relative; }
+.timeline::before { content: ''; position: absolute; left: 13px; top: 6px; bottom: 6px; width: 2px; background: var(--line); }
+.tl { position: relative; display: flex; gap: 12px; padding: 6px 0 10px; }
+.tl-icon { position: relative; z-index: 1; width: 28px; height: 28px; border-radius: 50%; flex: none; display: flex;
+  align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: #eef1f5; color: var(--muted);
+  border: 2px solid var(--surface); }
+.tl-body { flex: 1; min-width: 0; padding-top: 3px; }
+.tl-title { font-weight: 600; font-size: 13.5px; display: flex; gap: 8px; align-items: baseline; }
+.tl-title time { margin-left: auto; font-weight: 500; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tl-detail { font-size: 13px; color: var(--muted); margin-top: 2px; line-height: 1.45; }
+.tl-detail b { color: var(--ink); }
+.tl.read .tl-icon, .tl.calc .tl-icon { background: #ece9fc; color: #5b46d6; }
+.tl.ask .tl-icon, .tl.wait .tl-icon, .tl.reply .tl-icon { background: var(--warn-soft); color: var(--warn); }
+.tl.ask .tl-detail, .tl.reply .tl-detail { color: var(--ink); }
+.tl.task .tl-icon, .tl.send .tl-icon, .tl.open .tl-icon { background: var(--info-soft); color: var(--info); }
+.tl.gate .tl-icon { background: #fdf1dc; color: var(--warn); }
+.tl.approve .tl-icon, .tl.release .tl-icon, .tl.paid .tl-icon, .tl.done .tl-icon { background: var(--good-soft); color: var(--good); }
+.tl.reject .tl-icon { background: var(--bad-soft); color: var(--bad); }
+.tl.think .tl-icon { background: linear-gradient(135deg, #6c5ce7, #2f5bd3); color: #fff; }
+.tl.live .tl-icon { animation: pulse 1.4s ease-in-out infinite; }
+.tl.live .tl-title { color: var(--accent); }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(47, 91, 211, .35); } 50% { box-shadow: 0 0 0 7px rgba(47, 91, 211, 0); } }
+.tl-foot { font-size: 11.5px; color: var(--muted); margin-top: 6px; padding-left: 40px; }
+.tl-empty { color: var(--muted); padding: 10px 0; }
+.live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-left: 6px;
+  vertical-align: middle; animation: pulse 1.4s ease-in-out infinite; }
+
+/* Approvals and payments */
+.avatar.small { width: 30px; height: 30px; font-size: 12px; }
+.empty.slim { padding: 22px 16px; }
+.figures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0 4px; }
+.figures > div { background: var(--ground); border-radius: 10px; padding: 10px 14px; }
+.figures span { display: block; font-size: 12px; color: var(--muted); }
+.figures b { font-size: 18px; font-variant-numeric: tabular-nums; }
+.figures .to-pay { background: var(--good-soft); }
+.figures .to-pay b { color: var(--good); }
+.section .bot { width: 18px; height: 18px; font-size: 10px; vertical-align: -3px; margin-right: 4px; }
+ul.checks { list-style: none; margin: 0; padding: 0; }
+ul.checks li { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; border-bottom: 1px solid #eef1f5; font-size: 13.5px; line-height: 1.45; }
+ul.checks li span { width: 20px; height: 20px; border-radius: 50%; flex: none; display: flex; align-items: center;
+  justify-content: center; font-size: 11px; font-weight: 800; margin-top: 1px; }
+ul.checks li.pass span { background: var(--good-soft); color: var(--good); }
+ul.checks li.flag span { background: var(--warn-soft); color: var(--warn); }
+details.how { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; }
+details.how summary { cursor: pointer; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--muted); margin-bottom: 10px; }
+.decide { margin-top: 16px; padding: 14px 16px; border-radius: 12px; background: var(--ground); }
+.decide label { margin-top: 0; }
+.decide .actions { margin-top: 12px; }
+.detail-pane > .banner { margin-top: 16px; }
+.person { display: flex; gap: 10px; align-items: center; background: var(--ground); border-radius: 10px; padding: 10px 12px; }
+table.lines td.calc { color: var(--muted); font-size: 12.5px; text-align: left; }
+.bill-img.small { max-height: 200px; }
+.tl.error .tl-icon { background: var(--bad-soft); color: var(--bad); }
+.tl.error .tl-title { color: var(--bad); }

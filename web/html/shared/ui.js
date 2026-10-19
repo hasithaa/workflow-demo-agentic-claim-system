@@ -91,7 +91,14 @@ export async function showBill(url, name) {
 
 // Fills <img data-file="..."> thumbnails; bill storage needs the token, which an <img> cannot send.
 export function loadThumbnails(root) {
-  root.querySelectorAll('img[data-file]').forEach(async (img) => { img.src = await fileUrl(img.dataset.file); });
+  root.querySelectorAll('img[data-file]').forEach(async (img) => {
+    const src = await fileUrl(img.dataset.file);
+    if (src) { img.src = src; return; }
+    const missing = document.createElement('div');
+    missing.className = 'placeholder';
+    missing.textContent = 'The bill could not be loaded';
+    img.replaceWith(missing);
+  });
 }
 
 export const STATUS = {
