@@ -3,7 +3,7 @@
 // shows the bill beside the lines the expense assistant read, its figures and policy checks, how it got there, and the
 // decision. The gateway passes the user's token on, so the app sends no identity.
 
-import { signedInUser, topbar, wireSignOut, toast, showBill, loadThumbnails, esc, money, when, nameOf, initials, claimNo } from '/shared/ui.js';
+import { signedInUser, topbar, wireSignOut, toast, showBill, loadThumbnails, esc, money, when, nameOf, initials, claimNo, viewing, backLink, wireBack } from '/shared/ui.js';
 import { api as authed } from '/shared/auth.js';
 import { loadRun, timeline, billTable, excludedLines } from '/shared/agent.js';
 
@@ -49,8 +49,9 @@ async function start() {
   wireSignOut();
   document.getElementById('list').addEventListener('click', (e) => {
     const item = e.target.closest('[data-task]');
-    if (item) select(item.dataset.task);
+    if (item) { select(item.dataset.task); viewing(true); }
   });
+  wireBack(document.getElementById('detail'));
   refresh();
 }
 
@@ -125,7 +126,7 @@ function renderDetail() {
   const findings = Array.isArray(c.findings) ? c.findings : String(c.findings || '').split(/;\s*|\.\s+/).filter(Boolean);
   const first = nameOf(c.employee).split(' ')[0];
   const decision = run?.decision;
-  box.innerHTML = `<div class="detail-head">
+  box.innerHTML = `${backLink('My approvals')}<div class="claim-view"><div class="cv-main"><div class="detail-head">
         <span class="avatar">${esc(initials(nameOf(c.employee)))}</span>
         <div style="flex:1;min-width:0"><h2>${esc(c.description)}</h2>
           <div class="meta">${esc(nameOf(c.employee))} · ${esc(claimNo(c.claimId))} · asked ${when(t.startTime)}</div></div>
@@ -142,14 +143,14 @@ function renderDetail() {
           <ul class="checks">${findings.map((f) => `<li class="${flagged(f) ? 'flag' : 'pass'}"><span>${flagged(f) ? '!' : '✓'}</span>${esc(f)}</li>`).join('')}</ul>
           ${run?.bill ? `<div class="section">As the assistant read the bill</div>${billTable(run.bill, excludedLines(run.bill, findings))}` : ''}</div>
       </div>
-      <details class="how"${isPending ? '' : ' open'}><summary>How the assistant got here · ${run ? `${run.steps.length} steps, ${run.calls} model calls` : 'loading'}</summary>
-        ${timeline(run, user.username)}</details>
       ${isPending ? `<div class="decide"><label for="comment">Comment for ${esc(first)}</label>
           <textarea id="comment" rows="2" placeholder="Optional">${esc(drafts.get(t.taskId) || '')}</textarea>
           <div class="actions"><button class="btn bad" data-decide="reject">Reject</button>
             <button class="btn good" data-decide="approve">Approve ${money(c.amountToPay)}</button></div></div>`
     : decision ? `<div class="banner ${decision.approved ? 'good' : 'bad'}"><b>${decision.by === user.username ? 'You' : esc(nameOf(decision.by))} ${decision.approved ? 'approved' : 'rejected'}</b>
-          ${decision.at ? ` ${when(decision.at)}` : ''}${decision.comment ? ` · “${esc(decision.comment)}”` : ''}</div>` : ''}`;
+          ${decision.at ? ` ${when(decision.at)}` : ''}${decision.comment ? ` · “${esc(decision.comment)}”` : ''}</div>` : ''}</div>
+      <aside class="cv-side"><div class="section">Progress ${run?.running ? '<span class="live-dot"></span>' : ''}</div>
+        ${timeline(run, user.username)}</aside></div>`;
   loadThumbnails(box);
   box.querySelector('.bill-img')?.addEventListener('click', (e) => showBill(e.target.dataset.view, e.target.dataset.name));
   const comment = box.querySelector('#comment');
@@ -165,6 +166,8 @@ async function decide(t, approved) {
     await api(`human-tasks/${encodeURIComponent(t.taskId)}/complete`, { method: 'POST', body: JSON.stringify({ result: { approved, comment } }) });
     toast(`${claimNo(t.taskInput?.claimId)} ${approved ? 'approved' : 'rejected'}`, approved ? 'good' : 'bad');
     done.add(t.taskId);
+    // Decided: back to the list, where it now shows under Decided.
+    viewing(false);
     drafts.delete(t.taskId);
     document.activeElement?.blur();
     run = null;

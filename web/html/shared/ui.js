@@ -111,3 +111,16 @@ export const STATUS = {
   REJECTED: 'Rejected',
   PAID: 'Paid',
 };
+
+// Opens one claim (or task) on its own, or goes back to the list.
+export function viewing(on) {
+  document.querySelector('.split')?.classList.toggle('viewing', on);
+  window.scrollTo(0, 0);
+}
+
+export const backLink = (label) => `<button class="back" data-back>← ${esc(label)}</button>`;
+
+// The back link sits in the detail pane, which is re-rendered: listen once on the pane.
+export function wireBack(pane) {
+  pane.addEventListener('click', (e) => { if (e.target.closest('[data-back]')) viewing(false); });
+}

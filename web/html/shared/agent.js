@@ -10,13 +10,16 @@ const DONE = 'COMPLETED';
 const FAILED = ['FAILED', 'TIMED_OUT', 'CANCELED', 'TERMINATED'];
 const FAILED_TITLES = { readBill: 'Could not read the bill', llmChat: 'A model call failed', payClaim: 'The payment failed' };
 
-// The run and its tree. Returns null while the run is not visible yet (just submitted).
+// The run and its tree. Returns null while the run is not visible yet (just submitted), and { gone: true } once the
+// workflow runtime no longer has it: runs are removed after the retention period, the claim record stays.
+const GONE = Symbol('gone');
 export async function loadRun(claimId) {
   const id = encodeURIComponent(claimId);
   const [run, tree] = await Promise.all([
-    api(`/api/workflow/workflows/${id}`).then((r) => (r.ok ? r.json() : null)),
+    api(`/api/workflow/workflows/${id}`).then((r) => (r.ok ? r.json() : r.status === 404 ? GONE : null)),
     api(`/api/workflow/workflows/${id}/activity-tree`).then((r) => (r.ok ? r.json() : null)),
   ]);
+  if (run === GONE) return { gone: true, running: false, steps: [], calls: 0 };
   if (!run || !tree) return null;
   return readRun(run, tree.nodes || []);
 }
@@ -36,6 +39,9 @@ function eventPayloads(nodes) {
   }
   return out;
 }
+
+// payClaim → "pay claim": how a step this view has no wording for reads.
+const words = (name) => String(name).replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').toLowerCase();
 
 export function readRun(run, nodes) {
   const payloads = eventPayloads(nodes);
@@ -60,6 +66,8 @@ export function readRun(run, nodes) {
       add('error', FAILED_TITLES[n.name] ?? `${n.name} failed`, esc(reason));
       continue;
     }
+    // A step this view does not know, or one whose shape differs, still shows: by its name, never as a broken panel.
+    try {
     switch (n.type === 'ACTIVITY' ? n.name : n.type === 'DATA' ? `data:${n.name}` : n.type) {
       case 'llmChat': {
         calls++;
@@ -84,10 +92,10 @@ export function readRun(run, nodes) {
         } else add('read', 'Reading the bill', 'The model is reading the image');
         break;
       case 'subtract':
-        add('calc', 'Worked out the amount to pay', live ? '' : `${fmt(n.input.total)} − ${fmt(n.input.amount)} = <b>${fmt(n.output)}</b>`);
+        add('calc', 'Worked out the amount to pay', live || n.input?.total == null ? '' : `${fmt(n.input?.total)} − ${[].concat(n.input?.amounts ?? n.input?.amount ?? []).map(fmt).join(' − ')} = <b>${fmt(n.output)}</b>`);
         break;
       case 'perPerson':
-        add('calc', 'Checked the per-person amount', live ? '' : `${fmt(n.input.amount)} ÷ ${n.input.people} = <b>${fmt(n.output)}</b> each`);
+        add('calc', 'Checked the per-person amount', live || n.input?.amount == null ? '' : `${fmt(n.input?.amount)} ÷ ${n.input?.people} = <b>${fmt(n.output)}</b> each`);
         break;
       case 'updateClaim': {
         const { status, note } = n.input || {};
@@ -97,6 +105,9 @@ export function readRun(run, nodes) {
         else if (status === 'APPROVED' || status === 'REJECTED') add('record', `Recorded the ${status === 'APPROVED' ? 'approval' : 'rejection'}`, note ? `“${esc(note)}”` : '');
         break;
       }
+      case 'askEmployee':
+        add('ask', 'Asked a question', `“${esc(n.input?.question ?? '')}”`);
+        break;
       case 'data:reply': {
         const r = live ? null : next('reply');
         add('reply', live ? 'Waiting for an answer' : 'Got an answer', r?.message ? `“${esc(r.message)}”` : live ? 'For days, if it has to' : '');
@@ -129,7 +140,13 @@ export function readRun(run, nodes) {
         if (!live) { paid = n.input?.amount; add('paid', 'Paid', fmt(paid)); }
         break;
       default:
+        if (n.type === 'ACTIVITY') add('step', live ? `Running ${words(n.name)}` : `Ran ${words(n.name)}`);
+        else if (n.type === 'DATA') add('wait', live ? `Waiting for ${words(n.name)}` : `Got ${words(n.name)}`);
         break;
+    }
+    } catch (e) {
+      console.warn('progress step', n.name, e);
+      add('step', words(n.name || n.type || 'a step'));
     }
   }
   // Runs from before the agent recorded the claim itself: the manager's task carries the same details.
@@ -143,18 +160,19 @@ export function readRun(run, nodes) {
   return { status: run.status, running, steps, bill, claim, assessment, decision, review, paid, summary, calls };
 }
 
-const ICONS = { think: '✦', open: '＋', wait: '⏳', read: '🧾', calc: '∑', ask: '?', send: '→', record: '✎', reply: '↩',
+const ICONS = { step: '•', think: '✦', open: '＋', wait: '⏳', read: '🧾', calc: '∑', ask: '?', send: '→', record: '✎', reply: '↩',
   task: '👤', approve: '✓', reject: '✕', error: '!', gate: '🔒', release: '✓', paid: '$', done: '★' };
 
 // The timeline. `viewer` turns the viewer's own name into "You" in step titles (never in quoted text).
 export function timeline(run, viewer = '') {
   if (!run) return '<div class="tl-empty">The assistant is starting…</div>';
+  if (run.gone) return '<div class="tl-empty">The step-by-step history of this claim is no longer kept: workflow runs are '
+    + 'removed after the retention period. The outcome above is from the claim record.</div>';
   const who = (text) => (viewer ? text.replace(new RegExp(nameOf(viewer), 'g'), 'You') : text);
   return `<ol class="timeline">${run.steps.map((s) => `<li class="tl ${s.kind}${s.live ? ' live' : ''}">
       <span class="tl-icon">${ICONS[s.kind] || '•'}</span>
       <div class="tl-body"><div class="tl-title">${esc(who(s.title))}${s.at && !s.live ? `<time>${clock(s.at)}</time>` : ''}</div>
-        ${s.detail ? `<div class="tl-detail">${s.detail}</div>` : ''}</div></li>`).join('')}</ol>
-    <div class="tl-foot">${run.calls} model call${run.calls === 1 ? '' : 's'} · every step recorded by the workflow runtime</div>`;
+        ${s.detail ? `<div class="tl-detail">${s.detail}</div>` : ''}</div></li>`).join('')}</ol>`;
 }
 
 const clock = (iso) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' });

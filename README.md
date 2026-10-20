@@ -71,7 +71,12 @@ running.
    the amount was worked out. Click **Release $342.50**. Ann's claim shows **Paid**.
 
 Every page reads the assistant's steps from the Workflow Management API (the run's activity tree): nothing about
-the agent is stored by the apps themselves.
+the agent is stored by the apps themselves. The **Progress** panel beside a claim is the apps' own reading of that tree
+(`web/html/shared/agent.js`): it knows this integration's activities (`createClaim`, `readBill`, `subtract`,
+`perPerson`, `updateClaim`, `askEmployee`, `payClaim`), its events (`bill`, `reply`), the manager's task and the payment review, and
+words them for people. A step it does not know, for example an activity you named differently, still shows, by its
+name. The claim's status and outcome are in the claims database; once the workflow runtime removes a finished run
+(its retention period), the claim still shows its outcome and Progress says the history is no longer kept.
 
 ## What is inside
 
@@ -114,9 +119,9 @@ the HTTP service and the connection.
 - **`expenseAgent`** (`agents.bal`) is a durable agent, and it is the workflow for each claim: every model call,
   activity, wait and task is recorded history. Its instructions carry the expense policy.
 - **Activities** (`functions.bal`): `readBill` reads the bill image with the model (`ai:ImageDocument`) into the
-  vendor, the date, the total and every line item; `updateClaim` records the status and note Ann sees; `payClaim`
-  pays the claim, and is gated: the Workflow Management API holds it as a review for the `FINANCE` role until a person
-  releases it.
+  vendor, the date, the total and every line item; `updateClaim` records the status and note Ann sees; `askEmployee`
+  puts the agent's question to Ann (the claim waits for her `reply` event); `payClaim` pays the claim, and is gated:
+  the Workflow Management API holds it as a review for the `FINANCE` role until a person releases it.
 - **Calculations:** `subtract` and `perPerson` are activities too, so every amount is computed in code (and
   recorded); the model never does the arithmetic.
 - **Events:** `bill` (the uploaded bill) and `reply` (Ann's answers), which the agent waits for durably.

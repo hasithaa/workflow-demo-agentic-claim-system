@@ -3,7 +3,7 @@
 // and how much, who approved it, how the assistant worked out the amount, and releases or holds the payment. The
 // gateway passes the user's token on, so the app sends no identity.
 
-import { signedInUser, topbar, wireSignOut, toast, showBill, loadThumbnails, esc, money, when, nameOf, initials, claimNo } from '/shared/ui.js';
+import { signedInUser, topbar, wireSignOut, toast, showBill, loadThumbnails, esc, money, when, nameOf, initials, claimNo, viewing, backLink, wireBack } from '/shared/ui.js';
 import { api as authed } from '/shared/auth.js';
 import { loadRun, timeline } from '/shared/agent.js';
 
@@ -56,8 +56,9 @@ async function start() {
   wireSignOut();
   document.getElementById('list').addEventListener('click', (e) => {
     const item = e.target.closest('[data-task]');
-    if (item) select(item.dataset.task);
+    if (item) { select(item.dataset.task); viewing(true); }
   });
+  wireBack(document.getElementById('detail'));
   refresh();
 }
 
@@ -122,7 +123,7 @@ function renderDetail() {
   const a = run?.assessment || {};
   const d = run?.decision;
   const calc = (run?.steps || []).filter((s) => s.kind === 'calc');
-  box.innerHTML = `<div class="detail-head">
+  box.innerHTML = `${backLink('Payments')}<div class="claim-view"><div class="cv-main"><div class="detail-head">
         <span class="avatar">${esc(initials(nameOf(claim.employee || '?')))}</span>
         <div style="flex:1;min-width:0"><h2>Pay ${esc(nameOf(claim.employee || ''))}</h2>
           <div class="meta">${esc(claim.description || '')} · ${esc(claimNo(claimOf(r)))} · held ${when(r.startTime)}</div></div>
@@ -140,13 +141,15 @@ function renderDetail() {
             <tr><td>Bill total</td><td>${money(a.billTotal ?? run?.bill?.total)}</td></tr>
             ${calc.map((s) => `<tr><td colspan="2" class="calc">${s.title}: ${s.detail}</td></tr>`).join('')}</tbody>
             <tfoot><tr><td>To pay</td><td>${money(amount)}</td></tr></tfoot></table>
-          ${a.billUrl ? `<div class="section">The bill</div><img class="bill-img small" data-file="${esc(a.billUrl)}" data-view="${esc(a.billUrl)}" data-name="${esc(a.billName)}" alt="bill">` : ''}</div>
-        <div class="col"><div class="section">What the expense assistant did</div>${timeline(run, user.username)}</div>
+</div>
+        <div class="col">${a.billUrl ? `<div class="section">The bill</div><img class="bill-img small" data-file="${esc(a.billUrl)}" data-view="${esc(a.billUrl)}" data-name="${esc(a.billName)}" alt="bill">` : ''}</div>
       </div>
       ${isPending ? `<div class="decide"><label for="reason">Reason, if you hold it</label>
           <textarea id="reason" rows="2" placeholder="Optional">${esc(drafts.get(r.taskId) || '')}</textarea>
           <div class="actions"><button class="btn bad" data-decide="hold">Hold</button>
-            <button class="btn good" data-decide="release">Release ${money(amount)}</button></div></div>` : ''}`;
+            <button class="btn good" data-decide="release">Release ${money(amount)}</button></div></div>` : ''}</div>
+      <aside class="cv-side"><div class="section">Progress ${run?.running ? '<span class="live-dot"></span>' : ''}</div>
+        ${timeline(run, user.username)}</aside></div>`;
   loadThumbnails(box);
   box.querySelector('.bill-img')?.addEventListener('click', (e) => showBill(e.target.dataset.view, e.target.dataset.name));
   const reason = box.querySelector('#reason');
@@ -163,6 +166,8 @@ async function decide(r, release) {
       body: JSON.stringify(release ? {} : { feedback: feedback || 'Held by finance' }) });
     toast(`${claimNo(claimOf(r))} ${release ? 'payment released' : 'payment held'}`, release ? 'good' : 'bad');
     done.add(r.taskId);
+    // Decided: back to the list, where it now shows under Decided.
+    viewing(false);
     drafts.delete(r.taskId);
     document.activeElement?.blur();
     runs.delete(claimOf(r));

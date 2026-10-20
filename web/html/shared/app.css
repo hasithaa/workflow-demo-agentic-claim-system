@@ -254,3 +254,15 @@ table.lines td.calc { color: var(--muted); font-size: 12.5px; text-align: left; 
 .bill-img.small { max-height: 200px; }
 .tl.error .tl-icon { background: var(--bad-soft); color: var(--bad); }
 .tl.error .tl-title { color: var(--bad); }
+
+/* One claim at a time: the list on its own, then the claim with its progress beside it. */
+.split:not(.viewing) { grid-template-columns: minmax(0, 760px); justify-content: center; }
+.split:not(.viewing) .detail-pane { display: none; }
+.split.viewing { grid-template-columns: 1fr; }
+.split.viewing .list-pane { display: none; }
+.back { background: none; border: 0; color: var(--accent); font: inherit; font-weight: 600; padding: 0; margin-bottom: 14px; cursor: pointer; }
+.claim-view { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 22px; align-items: start; }
+.cv-main { min-width: 0; }
+.cv-side { position: sticky; top: 16px; border-left: 1px solid var(--line); padding-left: 20px; max-height: calc(100vh - 110px); overflow: auto; }
+.cv-side > .section:first-child { margin-top: 0; }
+@media (max-width: 1100px) { .claim-view { grid-template-columns: 1fr; } .cv-side { position: static; border-left: 0; padding-left: 0; } }

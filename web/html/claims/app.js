@@ -2,7 +2,7 @@
 // (upload the bill, answer the expense assistant), the bill as the assistant read it, and every step the assistant
 // took, from the run's activity tree. Every status comes from the integration; the app holds no process logic.
 
-import { signedInUser, topbar, wireSignOut, toast, dialog, showBill, loadThumbnails, esc, money, when, claimNo, STATUS } from '/shared/ui.js';
+import { signedInUser, topbar, wireSignOut, toast, dialog, showBill, loadThumbnails, esc, money, when, claimNo, STATUS, viewing, backLink, wireBack } from '/shared/ui.js';
 import { api } from '/shared/auth.js';
 import { loadRun, timeline, billTable, excludedLines } from '/shared/agent.js';
 
@@ -28,8 +28,9 @@ async function start() {
   document.getElementById('new-claim').addEventListener('click', newClaim);
   document.getElementById('list').addEventListener('click', (e) => {
     const item = e.target.closest('[data-claim]');
-    if (item) select(item.dataset.claim);
+    if (item) { select(item.dataset.claim); viewing(true); }
   });
+  wireBack(document.getElementById('detail'));
   refresh();
 }
 
@@ -81,6 +82,9 @@ function renderList() {
   if (box.dataset.html !== html) { box.innerHTML = html; box.dataset.html = html; }
 }
 
+// The manager's own words come from the run's decision; the claim's note is what the agent wrote.
+const note = (c) => (run?.id === c.claimId && run?.decision?.comment) || c.comment;
+
 // The next step for the employee, by status.
 function nextStep(c) {
   switch (c.status) {
@@ -101,11 +105,11 @@ function nextStep(c) {
     case 'WAITING_APPROVAL':
       return '<div class="banner info"><b>With your manager.</b> The assistant sent the claim with its assessment; your manager decides.</div>';
     case 'APPROVED':
-      return `<div class="banner good"><b>Approved.</b> ${c.comment ? `“${esc(c.comment)}” · ` : ''}The payment waits for finance to release it.</div>`;
+      return `<div class="banner good"><b>Approved.</b> ${note(c) ? `“${esc(note(c))}” · ` : ''}The payment waits for finance to release it.</div>`;
     case 'PAID':
-      return `<div class="banner good"><b>Paid ${money(c.paidAmount ?? c.amount)}.</b>${c.comment ? ` Your manager: “${esc(c.comment)}”` : ''}</div>`;
+      return `<div class="banner good"><b>Paid ${money(c.paidAmount ?? c.amount)}.</b>${note(c) ? ` Your manager: “${esc(note(c))}”` : ''}</div>`;
     case 'REJECTED':
-      return `<div class="banner bad"><b>Rejected.</b>${c.comment ? ` Your manager: “${esc(c.comment)}”` : ''}</div>`;
+      return `<div class="banner bad"><b>Rejected.</b>${note(c) ? ` Your manager: “${esc(note(c))}”` : ''}</div>`;
     default:
       return '';
   }
@@ -123,18 +127,18 @@ function renderDetail() {
   box.dataset.signature = signature;
   const paid = c.status === 'PAID' && c.paidAmount != null && Number(c.paidAmount) !== Number(c.amount)
     ? `<div class="meta">paid ${money(c.paidAmount)}</div>` : '';
-  box.innerHTML = `<div class="detail-head">
+  box.innerHTML = `${backLink('My claims')}<div class="claim-view"><div class="cv-main"><div class="detail-head">
         <div style="flex:1;min-width:0"><h2>${esc(c.description)}</h2>
           <div class="meta">${esc(claimNo(c.claimId))} · submitted ${when(c.submittedAt)}</div></div>
         <div class="amount big">${money(c.amount)}${paid}</div><span class="pill ${c.status}">${STATUS[c.status]}</span></div>
       <div class="next">${nextStep(c)}</div>
       <div class="cols">
         <div class="col"><div class="section">Your bill</div>
-          ${c.billUrl ? `<img class="bill-img" data-file="${esc(c.billUrl)}" data-view="${esc(c.billUrl)}" data-name="${esc(c.billName)}" alt="bill">` : '<div class="placeholder">No bill yet</div>'}
-          ${run?.bill ? `<div class="section">As the assistant read it</div>${billTable(run.bill, excludedLines(run.bill, findings))}` : ''}</div>
-        <div class="col"><div class="section">What the expense assistant did ${run?.running ? '<span class="live-dot"></span>' : ''}</div>
-          ${c.status === 'SUBMITTING' ? '<div class="tl-empty">Starting…</div>' : timeline(run, user.username)}</div>
-      </div>`;
+          ${c.billUrl ? `<img class="bill-img" data-file="${esc(c.billUrl)}" data-view="${esc(c.billUrl)}" data-name="${esc(c.billName)}" alt="bill">` : '<div class="placeholder">No bill yet</div>'}</div>
+        <div class="col">${run?.bill ? `<div class="section">As the assistant read it</div>${billTable(run.bill, excludedLines(run.bill, findings))}` : ''}</div>
+      </div></div>
+      <aside class="cv-side"><div class="section">Progress ${run?.running ? '<span class="live-dot"></span>' : ''}</div>
+        ${c.status === 'SUBMITTING' ? '<div class="tl-empty">Starting…</div>' : timeline(run, user.username)}</aside></div>`;
   loadThumbnails(box);
   box.querySelector('.bill-img')?.addEventListener('click', (e) => showBill(e.target.dataset.view, e.target.dataset.name));
   wireActions(c);
@@ -194,6 +198,7 @@ function newClaim() {
     toast(`${claimNo(claimId)} submitted`, 'good');
     selected = claimId;
     run = null;
+    viewing(true);
     refresh();
   });
 }
