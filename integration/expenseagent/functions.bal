@@ -25,8 +25,8 @@ function readBill(string fileUrl) returns BillDetails|error {
     return details;
 }
 
-# Sets the claim's status and the note the employee sees with it: BILL_REQUIRED, INFO_REQUESTED (the note is the
-# question for the employee), WAITING_APPROVAL, APPROVED or REJECTED (the note is the manager's comment).
+# Sets the claim's status and the note the employee sees with it: BILL_REQUIRED, WAITING_APPROVAL, APPROVED or
+# REJECTED (the note is the manager's comment). A question for the employee goes through askEmployee.
 #
 # + claimId - The claim id: this run's workflow id
 # + status - The new status
@@ -43,6 +43,17 @@ function updateClaim(string claimId, string status, string note) returns error? 
 # + claimId - The claim id
 # + amount - The amount to pay, after the policy
 # + return - An error if the payment cannot be recorded
+# Asks the employee a question about the claim: the claim shows it, waiting for their reply.
+#
+# + claimId - The claim id: this run's workflow id
+# + question - A short question addressed to the employee
+# + return - An error if it cannot be recorded
+@workflow:Activity
+function askEmployee(string claimId, string question) returns error? {
+    sql:ExecutionResult _ = check claimsDb->execute(
+        `UPDATE claims SET status = 'INFO_REQUESTED', comment = ${question} WHERE claim_id = ${claimId}`);
+}
+
 @workflow:Activity
 function payClaim(string claimId, decimal amount) returns error? {
     sql:ExecutionResult _ = check claimsDb->execute(

@@ -20,8 +20,8 @@ Steps:
 2. Call createClaim with the claim id and the claim from your input, then wait for the bill event.
 3. Call readBill with the bill's fileUrl, and check the claim and the bill against the policy. Never do arithmetic
    yourself: use the subtract activity for the amount to pay and perPerson for the per-person amount.
-4. If the policy needs information the claim does not give, call updateClaim with INFO_REQUESTED and, as the note,
-   a short question addressed to the employee, then wait for the reply event. Repeat until nothing is missing.
+4. If the policy needs information the claim does not give, call askEmployee with a short question addressed to the
+   employee, then wait for the reply event. Repeat until nothing is missing. Only then go on to step 5.
 5. Call updateClaim with WAITING_APPROVAL and an empty note, then managerApproval. Its task input: claimId,
    employee, description, billName and billUrl (from the bill event), claimedAmount, billTotal, amountToPay (after
    the policy), and findings: one short line, with the numbers, for each check: the attendees and client (when it
@@ -37,6 +37,7 @@ Steps:
         createClaim,
         readBill,
         updateClaim,
+        askEmployee,
         subtract,
         perPerson,
         {activity: payClaim, approvalPolicy: {userRoles: "FINANCE", title: "Release the payment"}}
