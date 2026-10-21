@@ -1,4 +1,3 @@
-
 type Claim record {|
     string employee;
     string description;
@@ -32,3 +31,11 @@ type Decision record {|
     string comment;
 |};
 
+# The claim's status, as the employee sees it.
+enum ClaimStatus {
+    BILL_REQUIRED,
+    INFO_REQUESTED,
+    WAITING_APPROVAL,
+    APPROVED,
+    REJECTED
+}

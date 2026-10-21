@@ -106,24 +106,26 @@ name. The claim's status and outcome are in the claims database; once the workfl
 ### How sign-in works
 
 As in the first demo: Thunder is the identity provider, the apps sign in with OpenID Connect (authorization code
-with PKCE) and send the access token, a JWT, on every call. The Claims API validates it and takes the employee from
-it; the Workflow Management API validates it and takes the user and roles from its claims, so Jane, in `MANAGER`,
+with PKCE) and send the access token, a JWT, on every call. The Claims API validates it (the apps send the
+signed-in employee with the claim and as `?employee=`); the Workflow Management API validates it and takes the user and roles from its claims, so Jane, in `MANAGER`,
 sees the approval task and Ivy, in `FINANCE`, sees the payment review. Thunder's groups map to ICP roles in
 `db/05-icp-sso.sql`. `scripts/token.sh ann@example.com` prints a token for scripts and API tests.
 
 ## The integration
 
 `integration/` is the WSO2 Integrator project: open the folder in WSO2 Integrator to see the agent, its activities,
-the HTTP service and the connection.
+the HTTP service and the connection. It is the code the build in the video creates in the designer: plain activities,
+one database call or one expression each, and no hand-written helpers.
 
 - **`expenseAgent`** (`agents.bal`) is a durable agent, and it is the workflow for each claim: every model call,
   activity, wait and task is recorded history. Its instructions carry the expense policy.
-- **Activities** (`functions.bal`): `readBill` reads the bill image with the model (`ai:ImageDocument`) into the
-  vendor, the date, the total and every line item; `updateClaim` records the status and note Ann sees; `askEmployee`
-  puts the agent's question to Ann (the claim waits for her `reply` event); `payClaim` pays the claim, and is gated:
-  the Workflow Management API holds it as a review for the `FINANCE` role until a person releases it.
-- **Calculations:** `subtract` and `perPerson` are activities too, so every amount is computed in code (and
-  recorded); the model never does the arithmetic.
+- **Activities** (`functions.bal`): `createClaim` records the claim; `readBill` records the bill on the claim, reads
+  the file and has the model read the image (`ai:ImageDocument`) into the vendor, the date, the total and every line
+  item; `updateClaim` records the status and note Ann sees; `askEmployee` puts the agent's question to Ann (the claim
+  waits for her `reply` event); `payClaim` pays the claim, and is gated: the Workflow Management API holds it as a
+  review for the `FINANCE` role until a person releases it.
+- **Calculations:** `subtract` (once for each item left out) and `perPerson` are activities too, so every amount
+  is computed in code (and recorded); the model never does the arithmetic.
 - **Events:** `bill` (the uploaded bill) and `reply` (Ann's answers), which the agent waits for durably.
 - **Human task:** `managerApproval` for the `MANAGER` role, carrying the agent's assessment.
 - **The Claims API** (`main.bal`): `POST /claims` starts the agent and records the claim under the run's id;
