@@ -9,7 +9,8 @@
 #   mysql        claims, users, ICP and Temporal data                               :3306
 #
 # To run the integration from WSO2 Integrator instead: `INTEGRATION_HOST=host.docker.internal docker compose up -d
-# --build --scale integration=0`, then Run it in the Integrator (see README).
+# --build --scale integration=0` (add `BILLS_DIR=./data/bills` so the Integrator can read the bills), then Run it
+# in the Integrator (see README).
 name: expense-agent-demo
 
 services:
@@ -108,7 +109,7 @@ services:
       # The WSO2 model provider settings (serviceUrl, accessToken): local only, not committed.
       - ./config/model.toml:/app/config/model.toml:ro
       # The agent reads the uploaded bills from bill storage.
-      - bills:/data/files:ro
+      - ${BILLS_DIR:-bills}:/data/files:ro
       - icp-secrets:/secrets:ro
     restart: unless-stopped
     depends_on:
@@ -132,7 +133,7 @@ services:
       - ./web/nginx/40-seed-files.sh:/docker-entrypoint.d/40-seed-files.sh:ro
       - ./web/html:/usr/share/nginx/html:ro
       - ./web/seed-files:/seed-files:ro
-      - bills:/data/files
+      - ${BILLS_DIR:-bills}:/data/files
     depends_on:
       - thunder
 

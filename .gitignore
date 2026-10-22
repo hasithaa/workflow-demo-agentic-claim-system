@@ -3,3 +3,4 @@ target/
 Config.toml
 .DS_Store
 config/model.toml
+data/
