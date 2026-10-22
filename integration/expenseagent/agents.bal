@@ -21,7 +21,6 @@ final workflow:DurableAgent expenseAgent = check new ({
         reply: {request: Reply}
     },
     humanTasks: {
-        // The fields are described here, since 1.0.0 does not show a taskInputType to the model (ballerina-library#9323).
         managerApproval: {
             userRoles: "MANAGER",
             title: "Approve expense claim",
