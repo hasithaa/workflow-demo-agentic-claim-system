@@ -7,9 +7,8 @@ Ann files a claim and uploads the bill; the agent reads the bill, checks it agai
 written in plain language, asks Ann for anything missing, and hands her manager, Jane, its assessment. Payment waits
 for Ivy in finance to release it. The agent checks; people decide.
 
-> 🎬 **Watch the video:** [An agent that follows the policy](<YouTube link>) (11 min): the demo, how it works, and
+> 🎬 **Watch the video:** [An agent that follows the policy](https://youtu.be/XFb49Koodf8) (11 min): the demo, how it works, and
 > the full build from scratch in WSO2 Integrator.
-> 📖 **Read the article:** [An agent that follows the policy](<Medium link>) on Medium: the ideas behind it.
 
 This is the follow-up to [workflow-demo-simple-claim-app](https://github.com/hasithaa/workflow-demo-simple-claim-app),
 where a fixed workflow ran the same claim. Same app, same people, same stack: an agent instead of a fixed path.
