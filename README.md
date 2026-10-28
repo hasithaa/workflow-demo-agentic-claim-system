@@ -114,7 +114,7 @@ The model is the WSO2 default model provider, which the integration calls with t
 | Component | Version |
 |---|---|
 | Ballerina (the integration's build) | 2201.14.1 |
-| `ballerina/workflow` | 1.0.0 |
+| `ballerina/workflow` | 1.0.2 |
 | `ballerina/ai` (the WSO2 model provider) | 1.16.0 |
 | WSO2 Integration Control Plane | 2.1.0 |
 | Thunder | 1.0.1 |
@@ -159,7 +159,7 @@ its outcome and Progress says the history is no longer kept.
 
 `integration/` is the WSO2 Integrator project, as built in the designer in the video: open the folder in WSO2
 Integrator to see the agent, its activities, the HTTP service and the connections. Plain activities, one database
-call or one expression each, and no hand-written helpers. It uses `ballerina/workflow` 1.0.0.
+call or one expression each, and no hand-written helpers. It uses `ballerina/workflow` 1.0.2.
 
 ![The agent's capabilities: seven activities, two events and a human task, with the expense policy as its instructions](docs/images/capabilities.png)
 
